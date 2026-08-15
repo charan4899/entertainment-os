@@ -400,9 +400,13 @@ export const api = {
   },
 
   // Recommendations
-  async getRecommendations(): Promise<RecommendationItem[]> {
-    const data = await request<RecommendationWire[]>("/api/recommendations");
+  async getRecommendations(genres?: string[]): Promise<RecommendationItem[]> {
+    const qs = genres && genres.length > 0 ? `?genres=${encodeURIComponent(genres.join(","))}` : "";
+    const data = await request<RecommendationWire[]>(`/api/recommendations${qs}`);
     return data.map(fromRecommendationWire);
+  },
+  async getRecommendationGenres(): Promise<string[]> {
+    return request<string[]>("/api/recommendations/genres");
   },
   async ignoreRecommendation(tmdbId: number, type: MediaType): Promise<void> {
     await request<void>(`/api/recommendations/${tmdbId}/ignore?media_type=${type}`, {

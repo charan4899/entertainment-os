@@ -86,6 +86,20 @@ html {
   color-scheme: dark;
 }
 
+/* Native <select> dropdown popups are rendered by the browser/OS as their
+   own opaque overlay — they don't sit on our page's dark backdrop, so a
+   translucent background on the <select> itself (by design, for the nice
+   glassy closed-state look) computes to plain white in that overlay
+   context. Force a solid dark background + light text on the options
+   themselves so the open dropdown is actually readable. */
+select {
+  color-scheme: dark;
+}
+select option {
+  background-color: #0d1220;
+  color: #f2f6fb;
+}
+
 body {
   background: var(--color-bg);
   color: var(--color-text);

@@ -10,11 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { GlassPanel } from "@/components/common/glass-panel";
 import { RecommendationCard } from "./recommendation-card";
+import { RecommendationGenreFilter } from "./recommendation-genre-filter";
 
 export function RecommendationsGrid() {
   const {
     recommendations,
     recommendationsError,
+    recommendationGenres,
     addRecommendationToWatchlist,
     markRecommendationAsWatched,
     ignoreRecommendation,
@@ -50,6 +52,8 @@ export function RecommendationsGrid() {
         </GlassPanel>
       ) : (
         <>
+          <RecommendationGenreFilter />
+
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-dim" />
@@ -75,9 +79,11 @@ export function RecommendationsGrid() {
             <GlassPanel className="flex flex-col items-center gap-3 px-6 py-16 text-center">
               <Sparkles className="h-6 w-6 text-primary" />
               <p className="text-sm text-text-muted">
-                {recommendations.length === 0
-                  ? "You've worked through every suggestion. Mark titles as watched from here on and future recommendations will be built from your own history."
-                  : "No suggestions match this query."}
+                {recommendations.length === 0 && recommendationGenres.length > 0
+                  ? "No matches for that genre selection right now — try clearing a filter or picking a broader genre."
+                  : recommendations.length === 0
+                    ? "You've worked through every suggestion. Mark titles as watched from here on and future recommendations will be built from your own history."
+                    : "No suggestions match this query."}
               </p>
             </GlassPanel>
           ) : (
