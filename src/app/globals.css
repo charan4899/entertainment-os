@@ -1,0 +1,209 @@
+@import "tailwindcss";
+
+/* =======================================================================
+   ENTERTAINMENT OS — DESIGN TOKENS
+   A dark, instrument-panel aesthetic. Every color, weight and radius below
+   is a deliberate choice, not a framework default.
+   ======================================================================= */
+
+:root {
+  /* Core surfaces */
+  --color-bg: #05070b;
+  --color-bg-raised: #0a0e16;
+  --color-bg-overlay: #0d1220;
+  --color-panel: rgba(255, 255, 255, 0.035);
+  --color-panel-hover: rgba(255, 255, 255, 0.06);
+  --color-border: rgba(148, 197, 214, 0.14);
+  --color-border-strong: rgba(148, 197, 214, 0.32);
+
+  /* Signal colors */
+  --color-primary: #22d3ee; /* electric cyan */
+  --color-primary-soft: rgba(34, 211, 238, 0.14);
+  --color-primary-strong: #7ceeff;
+  --color-secondary: #3b6dff; /* deep blue */
+  --color-secondary-soft: rgba(59, 109, 255, 0.16);
+  --color-accent: #a45bff; /* purple */
+  --color-accent-soft: rgba(164, 91, 255, 0.16);
+  --color-success: #3cff9e; /* neon green */
+  --color-success-soft: rgba(60, 255, 158, 0.14);
+  --color-warning: #f5a524; /* amber */
+  --color-warning-soft: rgba(245, 165, 36, 0.14);
+  --color-danger: #ff5c7a;
+  --color-danger-soft: rgba(255, 92, 122, 0.14);
+
+  /* Text */
+  --color-text: #f2f6fb;
+  --color-text-muted: #8d9bb3;
+  --color-text-dim: #566079;
+
+  --font-display: var(--font-space-grotesk), "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-inter), "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, monospace;
+}
+
+@theme inline {
+  --color-bg: var(--color-bg);
+  --color-bg-raised: var(--color-bg-raised);
+  --color-bg-overlay: var(--color-bg-overlay);
+  --color-panel: var(--color-panel);
+  --color-panel-hover: var(--color-panel-hover);
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+
+  --color-primary: var(--color-primary);
+  --color-primary-soft: var(--color-primary-soft);
+  --color-primary-strong: var(--color-primary-strong);
+  --color-secondary: var(--color-secondary);
+  --color-secondary-soft: var(--color-secondary-soft);
+  --color-accent: var(--color-accent);
+  --color-accent-soft: var(--color-accent-soft);
+  --color-success: var(--color-success);
+  --color-success-soft: var(--color-success-soft);
+  --color-warning: var(--color-warning);
+  --color-warning-soft: var(--color-warning-soft);
+  --color-danger: var(--color-danger);
+  --color-danger-soft: var(--color-danger-soft);
+
+  --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-dim: var(--color-text-dim);
+
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+
+  --animate-scan: scan 3.2s linear infinite;
+  --animate-pulse-glow: pulse-glow 2.4s ease-in-out infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-drift: drift 40s linear infinite;
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+}
+
+/* Slim, low-contrast scrollbars that don't fight the HUD look */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 197, 214, 0.18);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 197, 214, 0.3);
+  background-clip: padding-box;
+}
+
+/* =======================================================================
+   SIGNATURE UTILITIES
+   ======================================================================= */
+
+/* Glass panel base — the instrument-panel surface used everywhere */
+.glass-panel {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--color-border);
+  position: relative;
+}
+
+.text-glow-primary {
+  text-shadow: 0 0 18px rgba(34, 211, 238, 0.45);
+}
+
+.grid-field {
+  background-image: linear-gradient(rgba(124, 238, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124, 238, 255, 0.055) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 90%);
+}
+
+.noise-veil::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@keyframes scan {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+    filter: drop-shadow(0 0 2px currentColor);
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 8px currentColor);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes drift {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 400px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
