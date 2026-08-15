@@ -3,6 +3,7 @@ import { AppearanceSettings } from "@/components/settings/appearance-settings";
 import { LibraryIO } from "@/components/settings/library-io";
 import { TmdbKeyForm } from "@/components/settings/tmdb-key-form";
 import { RecommendationSettings } from "@/components/settings/recommendation-settings";
+import { SeasonBackfill } from "@/components/settings/season-backfill";
 
 export default function SettingsPage() {
   return (
@@ -17,6 +18,7 @@ export default function SettingsPage() {
         <LibraryIO />
         <TmdbKeyForm />
         <RecommendationSettings />
+        <SeasonBackfill />
       </div>
     </div>
   );

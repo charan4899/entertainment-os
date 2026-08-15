@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Loader2, Search } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -13,7 +14,7 @@ import { BrowseCard } from "./browse-card";
 import type { BrowseResult, MediaType } from "@/lib/types";
 
 export function BrowseView() {
-  const { markTitleAsWatched } = useLibrary();
+  const { markTitleAsWatched, addBrowseTitleToWatchlist } = useLibrary();
 
   const [type, setType] = useState<MediaType>("movie");
   const [query, setQuery] = useState("");
@@ -23,7 +24,8 @@ export function BrowseView() {
   const [results, setResults] = useState<BrowseResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [pendingId, setPendingId] = useState<number | null>(null);
+  const [watchedPendingId, setWatchedPendingId] = useState<number | null>(null);
+  const [watchlistPendingId, setWatchlistPendingId] = useState<number | null>(null);
 
   function handleQueryChange(value: string) {
     setQuery(value);
@@ -63,16 +65,30 @@ export function BrowseView() {
   }, [type, debouncedQuery, page]);
 
   async function handleMarkWatched(item: BrowseResult) {
-    setPendingId(item.tmdbId);
+    setWatchedPendingId(item.tmdbId);
     try {
       await markTitleAsWatched(item.tmdbId, item.type);
-      setResults((prev) =>
-        prev.map((r) => (r.tmdbId === item.tmdbId ? { ...r, alreadyWatched: true } : r))
-      );
+      // Marked-watched titles have nothing left to do here — drop them
+      // from the grid instead of just flagging them.
+      setResults((prev) => prev.filter((r) => r.tmdbId !== item.tmdbId));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't mark that as watched.");
     } finally {
-      setPendingId(null);
+      setWatchedPendingId(null);
+    }
+  }
+
+  async function handleAddToWatchlist(item: BrowseResult) {
+    setWatchlistPendingId(item.tmdbId);
+    try {
+      await addBrowseTitleToWatchlist(item.tmdbId, item.type);
+      setResults((prev) =>
+        prev.map((r) => (r.tmdbId === item.tmdbId ? { ...r, inWatchlist: true } : r))
+      );
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't add that to your watchlist.");
+    } finally {
+      setWatchlistPendingId(null);
     }
   }
 
@@ -113,14 +129,26 @@ export function BrowseView() {
         </GlassPanel>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {results.map((item) => (
-            <BrowseCard
-              key={`${item.type}-${item.tmdbId}`}
-              item={item}
-              pending={pendingId === item.tmdbId}
-              onMarkWatched={() => handleMarkWatched(item)}
-            />
-          ))}
+          <AnimatePresence initial={false}>
+            {results.map((item) => (
+              <motion.div
+                key={`${item.type}-${item.tmdbId}`}
+                layout
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.18 }}
+              >
+                <BrowseCard
+                  item={item}
+                  watchedPending={watchedPendingId === item.tmdbId}
+                  watchlistPending={watchlistPendingId === item.tmdbId}
+                  onMarkWatched={() => handleMarkWatched(item)}
+                  onAddToWatchlist={() => handleAddToWatchlist(item)}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       )}
 

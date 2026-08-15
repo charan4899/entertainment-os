@@ -242,6 +242,42 @@ function fromNotificationWire(n: NotificationWire): NotificationItem {
   };
 }
 
+interface BackfillSeasonsItemWire {
+  title: string;
+  previous_seasons_watched: number | null;
+  new_seasons_watched: number;
+}
+
+interface BackfillSeasonsResultWire {
+  updated: BackfillSeasonsItemWire[];
+  unchanged_count: number;
+  skipped_count: number;
+}
+
+export interface BackfillSeasonsItem {
+  title: string;
+  previousSeasonsWatched: number | null;
+  newSeasonsWatched: number;
+}
+
+export interface BackfillSeasonsResult {
+  updated: BackfillSeasonsItem[];
+  unchangedCount: number;
+  skippedCount: number;
+}
+
+function fromBackfillSeasonsWire(b: BackfillSeasonsResultWire): BackfillSeasonsResult {
+  return {
+    updated: b.updated.map((u) => ({
+      title: u.title,
+      previousSeasonsWatched: u.previous_seasons_watched,
+      newSeasonsWatched: u.new_seasons_watched,
+    })),
+    unchangedCount: b.unchanged_count,
+    skippedCount: b.skipped_count,
+  };
+}
+
 interface BrowseResultWire {
   tmdb_id: number;
   title: string;
@@ -308,6 +344,13 @@ export const api = {
   },
   async deleteWatched(id: string): Promise<void> {
     await request<void>(`/api/watched/${id}`, { method: "DELETE" });
+  },
+  /** One-off maintenance action — see Settings. Safe to call more than once. */
+  async backfillSeasons(): Promise<BackfillSeasonsResult> {
+    const data = await request<BackfillSeasonsResultWire>("/api/watched/backfill-seasons", {
+      method: "POST",
+    });
+    return fromBackfillSeasonsWire(data);
   },
 
   // Watchlist
@@ -457,5 +500,11 @@ export const api = {
       method: "POST",
     });
     return fromWatchedWire(data);
+  },
+  async addTitleToWatchlist(tmdbId: number, type: MediaType): Promise<WatchlistItem> {
+    const data = await request<WatchlistWire>(`/api/browse/${tmdbId}/watchlist?media_type=${type}`, {
+      method: "POST",
+    });
+    return fromWatchlistWire(data);
   },
 };

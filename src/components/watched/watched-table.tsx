@@ -2,12 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowDown, ArrowUp, ArrowUpDown, Search, Star } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Search, Star, Trash2 } from "lucide-react";
 import { useLibrary } from "@/lib/store";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { Poster } from "@/components/common/poster";
 import { GlassPanel } from "@/components/common/glass-panel";
 import { formatDate, cn, hashAccent } from "@/lib/utils";
@@ -45,7 +47,7 @@ function accentToBadge(title: string) {
 }
 
 export function WatchedTable() {
-  const { watched, toggleFavorite } = useLibrary();
+  const { watched, toggleFavorite, removeWatched } = useLibrary();
 
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 150);
@@ -53,6 +55,7 @@ export function WatchedTable() {
   const [genreFilter, setGenreFilter] = useState<string>("all");
   const [sortKey, setSortKey] = useState<SortKey>("watchedDate");
   const [sortDir, setSortDir] = useState<SortDirection>("desc");
+  const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
 
   const genres = useMemo(() => {
     const set = new Set<string>();
@@ -100,6 +103,8 @@ export function WatchedTable() {
     }
   }
 
+  const pendingRemove = watched.find((w) => w.id === pendingRemoveId) ?? null;
+
   return (
     <div>
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -136,7 +141,7 @@ export function WatchedTable() {
 
       <GlassPanel className="overflow-hidden p-0" animate={false}>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[880px] border-collapse text-sm">
+          <table className="w-full min-w-[940px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-border text-left font-mono text-[11px] uppercase tracking-wider text-text-dim">
                 <th className="w-16 px-4 py-3.5 font-medium">Poster</th>
@@ -175,6 +180,7 @@ export function WatchedTable() {
                   </button>
                 </th>
                 <th className="px-4 py-3.5 text-center font-medium">Favorite</th>
+                <th className="px-4 py-3.5 text-right font-medium">Remove</th>
               </tr>
             </thead>
             <tbody>
@@ -239,6 +245,18 @@ export function WatchedTable() {
                       </button>
                     </div>
                   </td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end">
+                      <Button
+                        size="icon"
+                        variant="danger"
+                        onClick={() => setPendingRemoveId(item.id)}
+                        aria-label={`Remove ${item.title} from watched`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </td>
                 </motion.tr>
               ))}
             </tbody>
@@ -257,6 +275,33 @@ export function WatchedTable() {
       <p className="mt-3 font-mono text-[11px] uppercase tracking-wider text-text-dim">
         {rows.length} of {watched.length} logged
       </p>
+
+      <Dialog
+        open={!!pendingRemove}
+        onClose={() => setPendingRemoveId(null)}
+        title="Remove from watched?"
+        description={
+          pendingRemove
+            ? `"${pendingRemove.title}" will be removed from your watched history. This can't be undone.`
+            : undefined
+        }
+      >
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="ghost" onClick={() => setPendingRemoveId(null)}>
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            onClick={() => {
+              if (pendingRemoveId) removeWatched(pendingRemoveId);
+              setPendingRemoveId(null);
+            }}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Remove
+          </Button>
+        </div>
+      </Dialog>
     </div>
   );
 }
