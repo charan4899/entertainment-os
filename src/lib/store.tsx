@@ -55,6 +55,7 @@ interface LibraryContextValue {
   ignoreRecommendation: (tmdbId: number, type: MediaType) => Promise<void>;
   addRecommendationToWatchlist: (tmdbId: number, type: MediaType) => Promise<void>;
   markRecommendationAsWatched: (tmdbId: number, type: MediaType) => Promise<void>;
+  markTitleAsWatched: (tmdbId: number, type: MediaType) => Promise<void>;
   updateSettings: (payload: {
     tmdbApiKey?: string;
     includeMovies?: boolean;
@@ -166,10 +167,16 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     [refreshActivity]
   );
 
-  const ignoreRecommendation = useCallback(async (tmdbId: number, type: MediaType) => {
-    await api.ignoreRecommendation(tmdbId, type);
-    setRecommendations((prev) => prev.filter((r) => !(r.tmdbId === tmdbId && r.type === type)));
-  }, []);
+  const ignoreRecommendation = useCallback(
+    async (tmdbId: number, type: MediaType) => {
+      await api.ignoreRecommendation(tmdbId, type);
+      // Refetch rather than just filtering locally — the backend excludes
+      // the newly-ignored title automatically, so this naturally backfills
+      // the list to full size instead of shrinking it by one.
+      await refreshRecommendations();
+    },
+    [refreshRecommendations]
+  );
 
   const addRecommendationToWatchlist = useCallback(
     async (tmdbId: number, type: MediaType) => {
@@ -186,6 +193,16 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       const created = await api.recommendationToWatched(tmdbId, type);
       setWatched((prev) => [created, ...prev]);
       setRecommendations((prev) => prev.filter((r) => !(r.tmdbId === tmdbId && r.type === type)));
+      await refreshActivity();
+    },
+    [refreshActivity]
+  );
+
+  /** Used by the Browse page — logs a title as watched directly, no watchlist detour. */
+  const markTitleAsWatched = useCallback(
+    async (tmdbId: number, type: MediaType) => {
+      const created = await api.markTitleWatched(tmdbId, type);
+      setWatched((prev) => [created, ...prev]);
       await refreshActivity();
     },
     [refreshActivity]
@@ -256,6 +273,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       ignoreRecommendation,
       addRecommendationToWatchlist,
       markRecommendationAsWatched,
+      markTitleAsWatched,
       updateSettings,
       importLibrary,
     }),
@@ -276,6 +294,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       ignoreRecommendation,
       addRecommendationToWatchlist,
       markRecommendationAsWatched,
+      markTitleAsWatched,
       updateSettings,
       importLibrary,
     ]

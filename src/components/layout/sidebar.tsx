@@ -13,6 +13,7 @@ import {
   Eye,
   ChevronsLeft,
   Radio,
+  Compass,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,7 @@ export const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/watched", label: "Watched", icon: Eye },
   { href: "/watchlist", label: "Watchlist", icon: Bookmark },
+  { href: "/browse", label: "Browse", icon: Compass },
   { href: "/recommendations", label: "Recommendations", icon: Sparkles },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/notifications", label: "Notifications", icon: Bell },

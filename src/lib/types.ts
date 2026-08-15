@@ -102,3 +102,14 @@ export interface NotificationItem {
   message: string;
   seasonNumber?: number | null;
 }
+
+export interface BrowseResult {
+  tmdbId: number;
+  title: string;
+  type: MediaType;
+  year: number | null;
+  posterUrl: string | null;
+  imdbRating: number;
+  alreadyWatched: boolean;
+  inWatchlist: boolean;
+}

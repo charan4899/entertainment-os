@@ -2,6 +2,7 @@ import type {
   ActivityEvent,
   AnalyticsData,
   AppSettingsState,
+  BrowseResult,
   MediaType,
   NotificationItem,
   Priority,
@@ -241,6 +242,30 @@ function fromNotificationWire(n: NotificationWire): NotificationItem {
   };
 }
 
+interface BrowseResultWire {
+  tmdb_id: number;
+  title: string;
+  media_type: MediaType;
+  year: number | null;
+  poster_path: string | null;
+  imdb_rating: number;
+  already_watched: boolean;
+  in_watchlist: boolean;
+}
+
+function fromBrowseResultWire(b: BrowseResultWire): BrowseResult {
+  return {
+    tmdbId: b.tmdb_id,
+    title: b.title,
+    type: b.media_type,
+    year: b.year,
+    posterUrl: b.poster_path,
+    imdbRating: b.imdb_rating,
+    alreadyWatched: b.already_watched,
+    inWatchlist: b.in_watchlist,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -417,5 +442,20 @@ export const api = {
   async getNotifications(): Promise<NotificationItem[]> {
     const data = await request<NotificationWire[]>("/api/notifications");
     return data.map(fromNotificationWire);
+  },
+
+  // Browse
+  async browse(params: { type: MediaType; query?: string; page?: number }): Promise<BrowseResult[]> {
+    const qs = new URLSearchParams({ media_type: params.type });
+    if (params.query) qs.set("query", params.query);
+    if (params.page) qs.set("page", String(params.page));
+    const data = await request<BrowseResultWire[]>(`/api/browse?${qs.toString()}`);
+    return data.map(fromBrowseResultWire);
+  },
+  async markTitleWatched(tmdbId: number, type: MediaType): Promise<WatchedItem> {
+    const data = await request<WatchedWire>(`/api/browse/${tmdbId}/watched?media_type=${type}`, {
+      method: "POST",
+    });
+    return fromWatchedWire(data);
   },
 };
