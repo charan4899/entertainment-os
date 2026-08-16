@@ -61,3 +61,31 @@ export function hashAccent(title: string): PosterAccent {
   }
   return ACCENTS[hash % ACCENTS.length];
 }
+
+/** Escapes a single CSV field — quotes it (doubling any internal quotes)
+ * only if it contains a comma, quote, or newline, per RFC 4180. */
+function csvField(value: string): string {
+  if (/[",\n]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+/** Builds CSV text (CRLF line endings) from a header row and data rows. */
+export function toCsv(headers: string[], rows: string[][]): string {
+  return [headers, ...rows].map((row) => row.map(csvField).join(",")).join("\r\n");
+}
+
+/** Triggers a browser download of text content — no server round-trip. A
+ * UTF-8 BOM is prepended for CSV so Excel renders accented characters
+ * correctly instead of mangling them. */
+export function downloadTextFile(filename: string, content: string, mimeType = "text/plain") {
+  const prefix = mimeType.includes("csv") ? "\uFEFF" : "";
+  const blob = new Blob([prefix + content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}

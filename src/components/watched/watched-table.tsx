@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowDown, ArrowUp, ArrowUpDown, Search, Star, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Download, Search, Star, Trash2 } from "lucide-react";
 import { useLibrary } from "@/lib/store";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Poster } from "@/components/common/poster";
 import { GlassPanel } from "@/components/common/glass-panel";
-import { formatDate, cn, hashAccent } from "@/lib/utils";
+import { formatDate, cn, hashAccent, toCsv, downloadTextFile } from "@/lib/utils";
 
 type SortKey = "title" | "imdbRating" | "year" | "watchedDate";
 type SortDirection = "asc" | "desc";
@@ -105,6 +105,15 @@ export function WatchedTable() {
 
   const pendingRemove = watched.find((w) => w.id === pendingRemoveId) ?? null;
 
+  function handleDownloadCsv() {
+    const csv = toCsv(
+      ["Title", "Type"],
+      rows.map((item) => [item.title, item.type === "movie" ? "Movie" : "Series"])
+    );
+    const filename = `watched-titles-${new Date().toISOString().slice(0, 10)}.csv`;
+    downloadTextFile(filename, csv, "text/csv;charset=utf-8;");
+  }
+
   return (
     <div>
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -137,6 +146,15 @@ export function WatchedTable() {
             </option>
           ))}
         </Select>
+        <Button
+          variant="secondary"
+          onClick={handleDownloadCsv}
+          disabled={rows.length === 0}
+          className="sm:w-auto"
+        >
+          <Download className="h-3.5 w-3.5" />
+          Download CSV
+        </Button>
       </div>
 
       <GlassPanel className="overflow-hidden p-0" animate={false}>
@@ -273,7 +291,7 @@ export function WatchedTable() {
       </GlassPanel>
 
       <p className="mt-3 font-mono text-[11px] uppercase tracking-wider text-text-dim">
-        {rows.length} of {watched.length} logged
+        {rows.length} of {watched.length} logged — CSV download matches the titles currently shown
       </p>
 
       <Dialog
