@@ -15,6 +15,7 @@ import type {
   ActivityEvent,
   AppSettingsState,
   MediaType,
+  OriginCountryOption,
   Priority,
   RecommendationFilters,
   RecommendationItem,
@@ -44,6 +45,8 @@ interface LibraryContextValue {
   settings: AppSettingsState | null;
   /** Genre names available to filter recommendations by (union of enabled media types, minus Documentary). */
   availableGenres: string[];
+  /** Curated production-country options available to filter recommendations by. */
+  availableOriginCountries: OriginCountryOption[];
   /** Currently active recommendation filters — default means no filter (cold-start/affinity behavior). */
   recommendationFilters: RecommendationFilters;
 
@@ -83,6 +86,7 @@ const DEFAULT_RECOMMENDATION_FILTERS: RecommendationFilters = {
   genres: [],
   minYear: null,
   mediaType: "all",
+  originCountries: [],
 };
 
 function connectionMessage(err: unknown): string | null {
@@ -97,6 +101,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   const [activity, setActivity] = useState<ActivityEvent[]>([]);
   const [settings, setSettings] = useState<AppSettingsState | null>(null);
   const [availableGenres, setAvailableGenres] = useState<string[]>([]);
+  const [availableOriginCountries, setAvailableOriginCountries] = useState<OriginCountryOption[]>([]);
   const [recommendationFilters, setRecommendationFiltersState] = useState<RecommendationFilters>(
     DEFAULT_RECOMMENDATION_FILTERS
   );
@@ -132,6 +137,13 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     } catch {
       // Non-fatal (e.g. no TMDb key yet) — the filter just shows no options.
       setAvailableGenres([]);
+    }
+  }, []);
+  const refreshAvailableOriginCountries = useCallback(async () => {
+    try {
+      setAvailableOriginCountries(await api.getRecommendationOrigins());
+    } catch {
+      setAvailableOriginCountries([]);
     }
   }, []);
 
@@ -175,6 +187,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         refreshActivity(),
         refreshSettings(),
         refreshAvailableGenres(),
+        refreshAvailableOriginCountries(),
       ]);
     } catch (err) {
       const msg = connectionMessage(err);
@@ -187,6 +200,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     refreshActivity,
     refreshSettings,
     refreshAvailableGenres,
+    refreshAvailableOriginCountries,
     refreshRecommendations,
   ]);
 
@@ -355,6 +369,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       activity,
       settings,
       availableGenres,
+      availableOriginCountries,
       recommendationFilters,
       loading,
       connectionError,
@@ -381,6 +396,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       activity,
       settings,
       availableGenres,
+      availableOriginCountries,
       recommendationFilters,
       loading,
       connectionError,

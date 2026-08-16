@@ -5,6 +5,7 @@ import type {
   BrowseResult,
   MediaType,
   NotificationItem,
+  OriginCountryOption,
   Priority,
   RecommendationFilters,
   RecommendationItem,
@@ -406,12 +407,17 @@ export const api = {
     if (filters?.genres && filters.genres.length > 0) params.set("genres", filters.genres.join(","));
     if (filters?.minYear) params.set("min_year", String(filters.minYear));
     if (filters?.mediaType && filters.mediaType !== "all") params.set("media_type", filters.mediaType);
+    if (filters?.originCountries && filters.originCountries.length > 0)
+      params.set("origin", filters.originCountries.join(","));
     const qs = params.toString();
     const data = await request<RecommendationWire[]>(`/api/recommendations${qs ? `?${qs}` : ""}`);
     return data.map(fromRecommendationWire);
   },
   async getRecommendationGenres(): Promise<string[]> {
     return request<string[]>("/api/recommendations/genres");
+  },
+  async getRecommendationOrigins(): Promise<OriginCountryOption[]> {
+    return request<OriginCountryOption[]>("/api/recommendations/origins");
   },
   async ignoreRecommendation(tmdbId: number, type: MediaType): Promise<void> {
     await request<void>(`/api/recommendations/${tmdbId}/ignore?media_type=${type}`, {

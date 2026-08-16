@@ -15,51 +15,109 @@ const YEAR_OPTIONS = Array.from(
   (_, i) => CURRENT_YEAR - i
 );
 
-export function RecommendationFilterBar() {
-  const { availableGenres, recommendationFilters, setRecommendationFilters } = useLibrary();
+interface ChipOption {
+  value: string;
+  label: string;
+}
 
-  // Genre chips get their own local, debounced selection so rapid
-  // multi-clicking doesn't fire a request per click (each fetch can mean
-  // up to 20 TMDb page requests once a filter is active). Type and year
-  // are single-choice selects, so they apply immediately on change.
-  const [pendingGenres, setPendingGenres] = useState<string[]>(recommendationFilters.genres);
-  const debouncedGenres = useDebounce(pendingGenres, 450);
-  const [applyingGenres, setApplyingGenres] = useState(false);
+/** A debounced multi-select chip picker. Local `pending` selection updates
+ * instantly on click; the actual (potentially slow — up to 20 TMDb pages
+ * once active) fetch only fires after the selection settles, so rapid
+ * multi-clicking doesn't fire a request per click. */
+function ChipFilterGroup({
+  title,
+  options,
+  active,
+  onApply,
+}: {
+  title: string;
+  options: ChipOption[];
+  active: string[];
+  onApply: (values: string[]) => Promise<void>;
+}) {
+  const [pending, setPending] = useState<string[]>(active);
+  const debounced = useDebounce(pending, 450);
+  const [applying, setApplying] = useState(false);
 
   useEffect(() => {
     const sameAsActive =
-      debouncedGenres.length === recommendationFilters.genres.length &&
-      debouncedGenres.every((g) => recommendationFilters.genres.includes(g));
+      debounced.length === active.length && debounced.every((v) => active.includes(v));
     if (sameAsActive) return;
 
     let cancelled = false;
-    // Fetch-on-change is the intended use here — `applyingGenres` mirrors
-    // the in-flight request, and `cancelled` guards a stale response from
+    // Fetch-on-change is the intended use here — `applying` mirrors the
+    // in-flight request, and `cancelled` guards a stale response from
     // clobbering a newer one if the selection changes again mid-request.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setApplyingGenres(true);
-    setRecommendationFilters({ genres: debouncedGenres }).finally(() => {
-      if (!cancelled) setApplyingGenres(false);
+    setApplying(true);
+    onApply(debounced).finally(() => {
+      if (!cancelled) setApplying(false);
     });
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedGenres]);
+  }, [debounced]);
 
-  function toggleGenre(genre: string) {
-    setPendingGenres((prev) =>
-      prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre]
-    );
+  function toggle(value: string) {
+    setPending((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
   }
+
+  if (options.length === 0) return null;
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center gap-2">
+        <p className="font-mono text-[11px] uppercase tracking-wider text-text-dim">{title}</p>
+        {applying && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {options.map((opt) => {
+          const isActive = pending.includes(opt.value);
+          return (
+            <button
+              key={opt.value}
+              onClick={() => toggle(opt.value)}
+              className={cn(
+                "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors duration-150",
+                isActive
+                  ? "border-primary/50 bg-primary-soft text-primary-strong"
+                  : "border-border bg-white/[0.02] text-text-muted hover:border-border-strong hover:text-text"
+              )}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export function RecommendationFilterBar() {
+  const { availableGenres, availableOriginCountries, recommendationFilters, setRecommendationFilters } =
+    useLibrary();
+
+  // Bumped on "Clear all" to force both chip groups to remount and re-sync
+  // their local pending selection from the (now-cleared) store state.
+  const [resetKey, setResetKey] = useState(0);
 
   const hasAnyFilter =
-    pendingGenres.length > 0 || recommendationFilters.minYear || recommendationFilters.mediaType !== "all";
+    recommendationFilters.genres.length > 0 ||
+    recommendationFilters.originCountries.length > 0 ||
+    recommendationFilters.minYear !== null ||
+    recommendationFilters.mediaType !== "all";
 
   function clearAll() {
-    setPendingGenres([]);
-    setRecommendationFilters({ genres: [], minYear: null, mediaType: "all" });
+    setRecommendationFilters({ genres: [], originCountries: [], minYear: null, mediaType: "all" });
+    setResetKey((k) => k + 1);
   }
+
+  const genreOptions: ChipOption[] = availableGenres.map((g) => ({ value: g, label: g }));
+  const originOptions: ChipOption[] = availableOriginCountries.map((c) => ({
+    value: c.code,
+    label: c.label,
+  }));
 
   return (
     <div className="mb-5 space-y-4">
@@ -99,35 +157,21 @@ export function RecommendationFilterBar() {
         )}
       </div>
 
-      {availableGenres.length > 0 && (
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <p className="font-mono text-[11px] uppercase tracking-wider text-text-dim">
-              Filter by genre
-            </p>
-            {applyingGenres && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {availableGenres.map((genre) => {
-              const active = pendingGenres.includes(genre);
-              return (
-                <button
-                  key={genre}
-                  onClick={() => toggleGenre(genre)}
-                  className={cn(
-                    "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors duration-150",
-                    active
-                      ? "border-primary/50 bg-primary-soft text-primary-strong"
-                      : "border-border bg-white/[0.02] text-text-muted hover:border-border-strong hover:text-text"
-                  )}
-                >
-                  {genre}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <ChipFilterGroup
+        key={`genre-${resetKey}`}
+        title="Filter by genre"
+        options={genreOptions}
+        active={recommendationFilters.genres}
+        onApply={(genres) => setRecommendationFilters({ genres })}
+      />
+
+      <ChipFilterGroup
+        key={`origin-${resetKey}`}
+        title="Filter by origin country"
+        options={originOptions}
+        active={recommendationFilters.originCountries}
+        onApply={(originCountries) => setRecommendationFilters({ originCountries })}
+      />
     </div>
   );
 }

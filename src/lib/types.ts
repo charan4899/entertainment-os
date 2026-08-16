@@ -52,6 +52,13 @@ export interface RecommendationFilters {
   minYear: number | null;
   /** "all" = the combined view (no type restriction). */
   mediaType: "all" | MediaType;
+  /** ISO country codes, e.g. ["US", "GB"]. Empty means no origin filter. */
+  originCountries: string[];
+}
+
+export interface OriginCountryOption {
+  code: string;
+  label: string;
 }
 
 export interface ActivityEvent {
