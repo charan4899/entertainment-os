@@ -6,6 +6,7 @@ import type {
   MediaType,
   NotificationItem,
   Priority,
+  RecommendationFilters,
   RecommendationItem,
   SearchResult,
   WatchedItem,
@@ -400,9 +401,13 @@ export const api = {
   },
 
   // Recommendations
-  async getRecommendations(genres?: string[]): Promise<RecommendationItem[]> {
-    const qs = genres && genres.length > 0 ? `?genres=${encodeURIComponent(genres.join(","))}` : "";
-    const data = await request<RecommendationWire[]>(`/api/recommendations${qs}`);
+  async getRecommendations(filters?: RecommendationFilters): Promise<RecommendationItem[]> {
+    const params = new URLSearchParams();
+    if (filters?.genres && filters.genres.length > 0) params.set("genres", filters.genres.join(","));
+    if (filters?.minYear) params.set("min_year", String(filters.minYear));
+    if (filters?.mediaType && filters.mediaType !== "all") params.set("media_type", filters.mediaType);
+    const qs = params.toString();
+    const data = await request<RecommendationWire[]>(`/api/recommendations${qs ? `?${qs}` : ""}`);
     return data.map(fromRecommendationWire);
   },
   async getRecommendationGenres(): Promise<string[]> {

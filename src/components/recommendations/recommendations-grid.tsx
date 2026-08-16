@@ -7,16 +7,15 @@ import Link from "next/link";
 import { useLibrary } from "@/lib/store";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { GlassPanel } from "@/components/common/glass-panel";
 import { RecommendationCard } from "./recommendation-card";
-import { RecommendationGenreFilter } from "./recommendation-genre-filter";
+import { RecommendationFilterBar } from "./recommendation-filter-bar";
 
 export function RecommendationsGrid() {
   const {
     recommendations,
     recommendationsError,
-    recommendationGenres,
+    recommendationFilters,
     addRecommendationToWatchlist,
     markRecommendationAsWatched,
     ignoreRecommendation,
@@ -24,18 +23,20 @@ export function RecommendationsGrid() {
 
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 150);
-  const [typeFilter, setTypeFilter] = useState<"all" | "movie" | "series">("all");
 
+  // Type/year/genre are all applied server-side now (each selection fetches
+  // its own full batch) — this is purely a text search over whatever batch
+  // is currently loaded.
   const rows = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase();
-    return recommendations
-      .filter((item) => {
-        const matchesQuery = q.length === 0 || item.title.toLowerCase().includes(q);
-        const matchesType = typeFilter === "all" || item.type === typeFilter;
-        return matchesQuery && matchesType;
-      })
-      .sort((a, b) => b.imdbRating - a.imdbRating);
-  }, [recommendations, debouncedSearch, typeFilter]);
+    if (!q) return recommendations;
+    return recommendations.filter((item) => item.title.toLowerCase().includes(q));
+  }, [recommendations, debouncedSearch]);
+
+  const hasActiveFilter =
+    recommendationFilters.genres.length > 0 ||
+    recommendationFilters.minYear !== null ||
+    recommendationFilters.mediaType !== "all";
 
   return (
     <div>
@@ -52,35 +53,26 @@ export function RecommendationsGrid() {
         </GlassPanel>
       ) : (
         <>
-          <RecommendationGenreFilter />
+          <RecommendationFilterBar />
 
-          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="relative flex-1">
+          <div className="mb-5">
+            <div className="relative">
               <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-dim" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search recommendations..."
+                placeholder="Search within these recommendations..."
                 className="pl-10"
               />
             </div>
-            <Select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
-              className="sm:w-40"
-            >
-              <option value="all">All types</option>
-              <option value="movie">Movies</option>
-              <option value="series">Series</option>
-            </Select>
           </div>
 
           {rows.length === 0 ? (
             <GlassPanel className="flex flex-col items-center gap-3 px-6 py-16 text-center">
               <Sparkles className="h-6 w-6 text-primary" />
               <p className="text-sm text-text-muted">
-                {recommendations.length === 0 && recommendationGenres.length > 0
-                  ? "No matches for that genre selection right now — try clearing a filter or picking a broader genre."
+                {recommendations.length === 0 && hasActiveFilter
+                  ? "No matches for that filter combination right now — try clearing a filter or broadening your selection."
                   : recommendations.length === 0
                     ? "You've worked through every suggestion. Mark titles as watched from here on and future recommendations will be built from your own history."
                     : "No suggestions match this query."}

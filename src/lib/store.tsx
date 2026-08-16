@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -15,6 +16,7 @@ import type {
   AppSettingsState,
   MediaType,
   Priority,
+  RecommendationFilters,
   RecommendationItem,
   WatchedItem,
   WatchlistItem,
@@ -42,8 +44,8 @@ interface LibraryContextValue {
   settings: AppSettingsState | null;
   /** Genre names available to filter recommendations by (union of enabled media types, minus Documentary). */
   availableGenres: string[];
-  /** Currently active genre filter — empty means no filter (default cold-start/affinity behavior). */
-  recommendationGenres: string[];
+  /** Currently active recommendation filters — default means no filter (cold-start/affinity behavior). */
+  recommendationFilters: RecommendationFilters;
 
   loading: boolean;
   /** Set when the backend itself can't be reached (network/CORS/down). */
@@ -60,7 +62,7 @@ interface LibraryContextValue {
   ignoreRecommendation: (tmdbId: number, type: MediaType) => Promise<void>;
   addRecommendationToWatchlist: (tmdbId: number, type: MediaType) => Promise<void>;
   markRecommendationAsWatched: (tmdbId: number, type: MediaType) => Promise<void>;
-  setRecommendationGenres: (genres: string[]) => Promise<void>;
+  setRecommendationFilters: (partial: Partial<RecommendationFilters>) => Promise<void>;
   markTitleAsWatched: (tmdbId: number, type: MediaType) => Promise<void>;
   addBrowseTitleToWatchlist: (tmdbId: number, type: MediaType) => Promise<void>;
   updateSettings: (payload: {
@@ -77,6 +79,12 @@ interface LibraryContextValue {
 
 const LibraryContext = createContext<LibraryContextValue | null>(null);
 
+const DEFAULT_RECOMMENDATION_FILTERS: RecommendationFilters = {
+  genres: [],
+  minYear: null,
+  mediaType: "all",
+};
+
 function connectionMessage(err: unknown): string | null {
   if (err instanceof ApiError && err.status === 0) return err.message;
   return null;
@@ -89,11 +97,22 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   const [activity, setActivity] = useState<ActivityEvent[]>([]);
   const [settings, setSettings] = useState<AppSettingsState | null>(null);
   const [availableGenres, setAvailableGenres] = useState<string[]>([]);
-  const [recommendationGenres, setRecommendationGenresState] = useState<string[]>([]);
+  const [recommendationFilters, setRecommendationFiltersState] = useState<RecommendationFilters>(
+    DEFAULT_RECOMMENDATION_FILTERS
+  );
 
   const [loading, setLoading] = useState(true);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [recommendationsError, setRecommendationsError] = useState<string | null>(null);
+
+  // Always-current filter snapshot, read by fetches so rapid, near-simultaneous
+  // changes (e.g. toggling a genre chip right as the type dropdown changes)
+  // can't merge against a stale value the way reading component state in a
+  // closure could.
+  const filtersRef = useRef<RecommendationFilters>(DEFAULT_RECOMMENDATION_FILTERS);
+  // Monotonic request counter — if a slower, older request resolves after a
+  // newer one, its result is discarded instead of clobbering fresher data.
+  const requestIdRef = useRef(0);
 
   const refreshWatched = useCallback(async () => {
     setWatched(await api.getWatched());
@@ -115,28 +134,37 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       setAvailableGenres([]);
     }
   }, []);
-  const refreshRecommendations = useCallback(async () => {
-    try {
-      const data = await api.getRecommendations(recommendationGenres);
-      setRecommendations(data);
-      setRecommendationsError(null);
-    } catch (err) {
-      setRecommendations([]);
-      setRecommendationsError(err instanceof ApiError ? err.message : "Couldn't load recommendations.");
-    }
-  }, [recommendationGenres]);
 
-  const setRecommendationGenres = useCallback(async (genres: string[]) => {
-    setRecommendationGenresState(genres);
+  const fetchRecommendations = useCallback(async (filters: RecommendationFilters) => {
+    const requestId = ++requestIdRef.current;
     try {
-      const data = await api.getRecommendations(genres);
+      const data = await api.getRecommendations(filters);
+      if (requestId !== requestIdRef.current) return; // superseded by a newer request
       setRecommendations(data);
       setRecommendationsError(null);
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       setRecommendations([]);
       setRecommendationsError(err instanceof ApiError ? err.message : "Couldn't load recommendations.");
     }
   }, []);
+
+  /** Re-fetch with whatever filters are currently active — used after
+   * ignore/watched/watchlist actions so the active filter (genre/year/type)
+   * carries through the auto-refill instead of resetting. */
+  const refreshRecommendations = useCallback(async () => {
+    await fetchRecommendations(filtersRef.current);
+  }, [fetchRecommendations]);
+
+  const setRecommendationFilters = useCallback(
+    async (partial: Partial<RecommendationFilters>) => {
+      const next = { ...filtersRef.current, ...partial };
+      filtersRef.current = next;
+      setRecommendationFiltersState(next);
+      await fetchRecommendations(next);
+    },
+    [fetchRecommendations]
+  );
 
   const refreshAll = useCallback(async () => {
     setConnectionError(null);
@@ -327,7 +355,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       activity,
       settings,
       availableGenres,
-      recommendationGenres,
+      recommendationFilters,
       loading,
       connectionError,
       recommendationsError,
@@ -340,7 +368,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       ignoreRecommendation,
       addRecommendationToWatchlist,
       markRecommendationAsWatched,
-      setRecommendationGenres,
+      setRecommendationFilters,
       markTitleAsWatched,
       addBrowseTitleToWatchlist,
       updateSettings,
@@ -353,7 +381,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       activity,
       settings,
       availableGenres,
-      recommendationGenres,
+      recommendationFilters,
       loading,
       connectionError,
       recommendationsError,
@@ -366,7 +394,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       ignoreRecommendation,
       addRecommendationToWatchlist,
       markRecommendationAsWatched,
-      setRecommendationGenres,
+      setRecommendationFilters,
       markTitleAsWatched,
       addBrowseTitleToWatchlist,
       updateSettings,

@@ -47,6 +47,13 @@ export interface RecommendationItem {
   posterUrl: string | null;
 }
 
+export interface RecommendationFilters {
+  genres: string[];
+  minYear: number | null;
+  /** "all" = the combined view (no type restriction). */
+  mediaType: "all" | MediaType;
+}
+
 export interface ActivityEvent {
   id: string;
   label: string;
